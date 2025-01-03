@@ -102,35 +102,55 @@ class PhaseBoard:
 
 
 class Enemy(pg.sprite.Sprite):
-    SIZE = 30
     COLOR = (150, 60, 120)
-    SPEED = 3
 
-    def __init__(self, *groups):
+    def __init__(self, size, speed, *groups):
         super().__init__(*groups)
-        self.image = pg.Surface((self.SIZE, self.SIZE)).convert_alpha()
+        self.speed = speed
+        self.size = size
+        self.image = pg.Surface((self.size, self.size)).convert_alpha()
         self.image.fill((255, 255, 255, 0))
         pg.draw.circle(
-            self.image, self.COLOR, (self.SIZE // 2, self.SIZE // 2), self.SIZE // 2
+            self.image, self.COLOR, (self.size // 2, self.size // 2), self.size // 2
         )
         # 左右の画面外にスポーンし，反対側に向かって移動
         self.rect = self.image.get_rect()
-        self.rect.y = random.randint(0, HEIGHT - self.SIZE)
+        self.rect.y = random.randint(0, HEIGHT - self.size)
         if random.choice([True, False]):
-            self.rect.x = -self.SIZE
+            self.rect.x = -self.size
             self.target_x = WIDTH
-            self.target_y = random.randint(0, HEIGHT - self.SIZE)
+            self.target_y = random.randint(0, HEIGHT - self.size)
         else:
             self.rect.x = WIDTH
-            self.target_x = -self.SIZE
-            self.target_y = random.randint(0, HEIGHT - self.SIZE)
+            self.target_x = -self.size
+            self.target_y = random.randint(0, HEIGHT - self.size)
 
     def update(self):
         v = pg.Vector2(self.target_x - self.rect.x, self.target_y - self.rect.y)
-        if v.length() < self.SPEED:
+        if v.length() < 10:
             self.kill()
-        v = v.normalize() * self.SPEED
+        v = v.normalize() * self.speed
         self.rect.move_ip(v)
+
+
+def spawn_enemy(phase, *groups):
+    # パラメータのデフォルト値
+    speed = 3
+    size = 25
+    count = 1
+
+    # フェーズに応じてパラメータを変更
+    if phase >= 2:
+        speed = random.randint(3, 5)
+    if phase >= 3:
+        size = random.randint(25, 35)
+    if phase >= 4:
+        speed = random.randint(2, 6)
+    if phase >= 5:
+        count = random.randint(1, 2)
+
+    for _ in range(count):
+        Enemy(size, speed, *groups)
 
 
 def main():
@@ -155,7 +175,7 @@ def main():
 
     # タイマーの設定
     pg.time.set_timer(USEREVENT_SPAWNENEMY, 1000)
-    pg.time.set_timer(USEREVENT_PHASEUP, 20000)
+    pg.time.set_timer(USEREVENT_PHASEUP, 10000)
     pg.time.set_timer(USEREVENT_SCOREUP, 1000)
 
     # ゲームループ
@@ -168,10 +188,10 @@ def main():
             elif event.type == USEREVENT_SCOREUP:
                 score_board.raise_score(1)
             elif event.type == USEREVENT_PHASEUP:
-                if phase_board.phase < 10:
+                if phase_board.phase < 5:
                     phase_board.raise_phase(1)
             elif event.type == USEREVENT_SPAWNENEMY:
-                Enemy(all_sprites, enemies)
+                spawn_enemy(phase_board.phase, enemies, all_sprites)
 
         # 更新処理
         all_sprites.update()
