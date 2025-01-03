@@ -43,8 +43,18 @@ class Player(pg.sprite.Sprite):
         elif self.direction == 3:
             self.rect.x -= self.SPEED
 
-        self.rect.x = max(0, min(self.rect.x, WIDTH - self.SIZE))
-        self.rect.y = max(0, min(self.rect.y, HEIGHT - self.SIZE))
+        if self.rect.x < 0:
+            self.rect.x = 0
+            self.health -= 0.5
+        if self.rect.x > WIDTH - self.SIZE:
+            self.rect.x = WIDTH - self.SIZE
+            self.health -= 0.5
+        if self.rect.y < 0:
+            self.rect.y = 0
+            self.health -= 0.5
+        if self.rect.y > HEIGHT - self.SIZE:
+            self.rect.y = HEIGHT - self.SIZE
+            self.health -= 0.5
 
 
 class HealthBar:
