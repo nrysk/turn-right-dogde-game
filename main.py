@@ -22,6 +22,7 @@ class Player(pg.sprite.Sprite):
         self.rect.center = (WIDTH // 2, HEIGHT // 2)
         self.cooltime = 0
         self.direction = 0  # 0:上, 1:右, 2:下, 3:左
+        self.health = 100
 
     def update(self):
         self.cooltime = max(0, self.cooltime - 1)
@@ -41,6 +42,17 @@ class Player(pg.sprite.Sprite):
 
         self.rect.x = max(0, min(self.rect.x, WIDTH - self.SIZE))
         self.rect.y = max(0, min(self.rect.y, HEIGHT - self.SIZE))
+
+
+class HealthBar:
+    def __init__(self, player):
+        self.player = player
+        self.rect = pg.Rect(10, 10, 100, 15)
+
+    def draw(self, screen):
+        pg.draw.rect(screen, (255, 0, 0), self.rect)
+        self.rect.width = self.player.health
+        pg.draw.rect(screen, (0, 255, 0), self.rect)
 
 
 class Enemy(pg.sprite.Sprite):
@@ -89,6 +101,9 @@ def main():
     enemies = pg.sprite.Group()
     all_sprites.add(enemies)
 
+    # UI の初期化
+    health_bar = HealthBar(player)
+
     # 敵のスポーンタイマーの設定
     pg.time.set_timer(USEREVENT_SPAWNENEMY, 1000)
 
@@ -105,9 +120,14 @@ def main():
         # 更新処理
         all_sprites.update()
 
+        # 当たり判定
+        for enemy in pg.sprite.spritecollide(player, enemies, False):
+            player.health -= 1
+
         # 描画処理
         screen.fill(BACKGROUND_COLOR)
         all_sprites.draw(screen)
+        health_bar.draw(screen)
         pg.display.flip()
         clock.tick(60)
 
