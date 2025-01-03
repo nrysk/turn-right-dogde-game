@@ -104,10 +104,12 @@ class PhaseBoard:
 class Enemy(pg.sprite.Sprite):
     COLOR = (150, 60, 120)
 
-    def __init__(self, size, speed, *groups):
+    def __init__(self, size, speed, has_gun, shot_probability, *groups):
         super().__init__(*groups)
         self.speed = speed
         self.size = size
+        self.has_gun = has_gun
+        self.shot_probability = shot_probability
         self.image = pg.Surface((self.size, self.size)).convert_alpha()
         self.image.fill((255, 255, 255, 0))
         pg.draw.circle(
@@ -132,25 +134,62 @@ class Enemy(pg.sprite.Sprite):
         v = v.normalize() * self.speed
         self.rect.move_ip(v)
 
+        if self.has_gun and random.random() < self.shot_probability:
+            Bullet(self.rect.center, self.groups())
+
+
+class Bullet(pg.sprite.Sprite):
+    COLOR = (40, 40, 70)
+    SPEED = 5
+    SIZE = 15
+
+    def __init__(self, pos, *groups):
+        super().__init__(*groups)
+        self.image = pg.Surface((self.SIZE, self.SIZE)).convert_alpha()
+        self.image.fill((255, 255, 255, 0))
+        pg.draw.polygon(
+            self.image,
+            self.COLOR,
+            [(0, 0), (0, self.SIZE), (self.SIZE, self.SIZE // 2)],
+        )
+        self.rect = self.image.get_rect()
+        self.rect.center = pos
+        # ランダムな方向に飛ぶ
+        self.velocity = (
+            pg.Vector2(random.random() * 2 - 1, random.random() * 2 - 1).normalize()
+            * self.SPEED
+        )
+
+    def update(self):
+        self.rect.move_ip(self.velocity)
+        if not pg.Rect(0, 0, WIDTH, HEIGHT).colliderect(self.rect):
+            self.kill()
+
 
 def spawn_enemy(phase, *groups):
     # パラメータのデフォルト値
     speed = 3
     size = 25
     count = 1
+    has_gun = False
+    shot_probability = 0.01
 
     # フェーズに応じてパラメータを変更
     if phase >= 2:
         speed = random.randint(3, 5)
     if phase >= 3:
-        size = random.randint(25, 35)
+        size = random.randint(25, 45)
     if phase >= 4:
         speed = random.randint(2, 6)
     if phase >= 5:
         count = random.randint(1, 2)
+    if phase >= 6:
+        has_gun = True
+    if phase >= 7:
+        shot_probability = 0.03
 
     for _ in range(count):
-        Enemy(size, speed, *groups)
+        Enemy(size, speed, has_gun, shot_probability, *groups)
 
 
 def main():
@@ -188,7 +227,7 @@ def main():
             elif event.type == USEREVENT_SCOREUP:
                 score_board.raise_score(1)
             elif event.type == USEREVENT_PHASEUP:
-                if phase_board.phase < 5:
+                if phase_board.phase < 8:
                     phase_board.raise_phase(1)
             elif event.type == USEREVENT_SPAWNENEMY:
                 spawn_enemy(phase_board.phase, enemies, all_sprites)
