@@ -5,7 +5,9 @@ import pygame as pg
 WIDTH, HEIGHT = 400, 600
 BACKGROUND_COLOR = (240, 240, 240)
 
-USEREVENT_SPAWNENEMY = pg.USEREVENT + 1
+USEREVENT_SCOREUP = pg.USEREVENT + 1
+USEREVENT_PHASEUP = pg.USEREVENT + 2
+USEREVENT_SPAWNENEMY = pg.USEREVENT + 10
 
 
 class Player(pg.sprite.Sprite):
@@ -71,6 +73,34 @@ class CooltimeBar:
         pg.draw.rect(screen, (180, 180, 180), self.rect)
 
 
+class ScoreBoard:
+    def __init__(self, rect):
+        self.score = 0
+        self.rect = pg.Rect(rect)
+
+    def draw(self, screen):
+        font = pg.font.Font(None, self.rect.height)
+        text = font.render(f"Score: {self.score}", True, (0, 0, 0))
+        screen.blit(text, self.rect.topleft)
+
+    def raise_score(self, score):
+        self.score += score
+
+
+class PhaseBoard:
+    def __init__(self, rect):
+        self.phase = 1
+        self.rect = pg.Rect(rect)
+
+    def draw(self, screen):
+        font = pg.font.Font(None, self.rect.height)
+        text = font.render(f"Phase: {self.phase}", True, (0, 0, 0))
+        screen.blit(text, self.rect.topleft)
+
+    def raise_phase(self, phase):
+        self.phase += phase
+
+
 class Enemy(pg.sprite.Sprite):
     SIZE = 30
     COLOR = (150, 60, 120)
@@ -120,9 +150,13 @@ def main():
     # UI の初期化
     health_bar = HealthBar(player, (10, 10, 200, 15))
     cooltime_bar = CooltimeBar(player, (10, 30, 200, 8))
+    score_board = ScoreBoard((10, 50, 200, 30))
+    phase_board = PhaseBoard((10, 80, 200, 30))
 
-    # 敵のスポーンタイマーの設定
+    # タイマーの設定
     pg.time.set_timer(USEREVENT_SPAWNENEMY, 1000)
+    pg.time.set_timer(USEREVENT_PHASEUP, 20000)
+    pg.time.set_timer(USEREVENT_SCOREUP, 1000)
 
     # ゲームループ
     running = True
@@ -131,6 +165,11 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 running = False
+            elif event.type == USEREVENT_SCOREUP:
+                score_board.raise_score(1)
+            elif event.type == USEREVENT_PHASEUP:
+                if phase_board.phase < 10:
+                    phase_board.raise_phase(1)
             elif event.type == USEREVENT_SPAWNENEMY:
                 Enemy(all_sprites, enemies)
 
@@ -146,6 +185,8 @@ def main():
         all_sprites.draw(screen)
         health_bar.draw(screen)
         cooltime_bar.draw(screen)
+        score_board.draw(screen)
+        phase_board.draw(screen)
         pg.display.flip()
         clock.tick(60)
 
