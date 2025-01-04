@@ -9,6 +9,98 @@ BACKGROUND_COLOR = (240, 240, 240)
 USEREVENT_SCOREUP = pg.USEREVENT + 1
 USEREVENT_PHASEUP = pg.USEREVENT + 2
 USEREVENT_SPAWNENEMY = pg.USEREVENT + 10
+USEREVENT_GAMEOVER = pg.USEREVENT + 20
+
+
+class GameScene:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.all_sprites = pg.sprite.Group()
+        self.player = Player(self.all_sprites)
+        self.all_sprites.add(self.player)
+        self.enemies = pg.sprite.Group()
+        self.all_sprites.add(self.enemies)
+
+        self.health_bar = HealthBar(self.player, (10, 10, 200, 15))
+        self.cooltime_bar = CooltimeBar(self.player, (10, 30, 200, 8))
+        self.score_board = ScoreBoard((10, 50, 200, 30))
+        self.phase_board = PhaseBoard((10, 80, 200, 30))
+
+        pg.time.set_timer(USEREVENT_SPAWNENEMY, 1000)
+        pg.time.set_timer(USEREVENT_PHASEUP, 10000)
+        pg.time.set_timer(USEREVENT_SCOREUP, 1000)
+
+    def update(self):
+        self.all_sprites.update()
+
+        for enemy in pg.sprite.spritecollide(self.player, self.enemies, False):
+            self.player.health -= 1
+
+        if self.player.health <= 0:
+            pg.event.post(pg.event.Event(USEREVENT_GAMEOVER))
+
+    def draw(self, screen):
+        screen.fill(BACKGROUND_COLOR)
+        self.all_sprites.draw(screen)
+        self.health_bar.draw(screen)
+        self.cooltime_bar.draw(screen)
+        self.score_board.draw(screen)
+        self.phase_board.draw(screen)
+        pg.display.flip()
+
+    def handle_event(self, event):
+        if event.type == USEREVENT_SCOREUP:
+            self.score_board.raise_score(1)
+        elif event.type == USEREVENT_PHASEUP:
+            if self.phase_board.phase < 8:
+                self.phase_board.raise_phase(1)
+        elif event.type == USEREVENT_SPAWNENEMY:
+            self.__spawn_enemy(self.phase_board.phase, self.enemies, self.all_sprites)
+
+    def __spawn_enemy(self, phase, *groups):
+        # パラメータのデフォルト値
+        speed = 3
+        size = 25
+        count = 1
+        has_gun = False
+        shot_probability = 0.01
+
+        # フェーズに応じてパラメータを変更
+        if phase >= 2:
+            speed = random.randint(3, 5)
+        if phase >= 3:
+            size = random.randint(25, 45)
+        if phase >= 4:
+            speed = random.randint(2, 6)
+        if phase >= 5:
+            has_gun = True
+        if phase >= 6:
+            count = random.randint(1, 2)
+        if phase >= 7:
+            count = 2
+            shot_probability = 0.03
+
+        for _ in range(count):
+            Enemy(size, speed, has_gun, shot_probability, *groups)
+
+
+class GameOverScene:
+    def __init__(self):
+        pass
+
+    def update(self):
+        pass
+
+    def draw(self, screen):
+        font = pg.font.Font(None, 50)
+        text = font.render("Game Over", True, (0, 0, 0))
+        screen.blit(text, (WIDTH // 2 - 50, HEIGHT // 2 - 25))
+        pg.display.flip()
+
+    def handle_event(self, event):
+        pass
 
 
 class Player(pg.sprite.Sprite):
@@ -176,33 +268,6 @@ class Bullet(pg.sprite.Sprite):
             self.kill()
 
 
-def spawn_enemy(phase, *groups):
-    # パラメータのデフォルト値
-    speed = 3
-    size = 25
-    count = 1
-    has_gun = False
-    shot_probability = 0.01
-
-    # フェーズに応じてパラメータを変更
-    if phase >= 2:
-        speed = random.randint(3, 5)
-    if phase >= 3:
-        size = random.randint(25, 45)
-    if phase >= 4:
-        speed = random.randint(2, 6)
-    if phase >= 5:
-        has_gun = True
-    if phase >= 6:
-        count = random.randint(1, 2)
-    if phase >= 7:
-        count = 2
-        shot_probability = 0.03
-
-    for _ in range(count):
-        Enemy(size, speed, has_gun, shot_probability, *groups)
-
-
 def main():
     # 初期化
     pg.init()
@@ -210,54 +275,39 @@ def main():
     pg.display.set_caption("Turn Right Dogde Game")
     clock = pg.time.Clock()
 
-    # スプライトグループ
-    all_sprites = pg.sprite.Group()
-    player = Player(all_sprites)
-    all_sprites.add(player)
-    enemies = pg.sprite.Group()
-    all_sprites.add(enemies)
-
-    # UI の初期化
-    health_bar = HealthBar(player, (10, 10, 200, 15))
-    cooltime_bar = CooltimeBar(player, (10, 30, 200, 8))
-    score_board = ScoreBoard((10, 50, 200, 30))
-    phase_board = PhaseBoard((10, 80, 200, 30))
-
-    # タイマーの設定
-    pg.time.set_timer(USEREVENT_SPAWNENEMY, 1000)
-    pg.time.set_timer(USEREVENT_PHASEUP, 10000)
-    pg.time.set_timer(USEREVENT_SCOREUP, 1000)
+    # ゲームシーンの初期化
+    current_scene = "game"
+    scenes = {
+        "game": GameScene(),
+        "gameover": GameOverScene(),
+    }
 
     # ゲームループ
     running = True
     while running:
         # イベント処理
-        for event in pg.event.get():
+        events = pg.event.get()
+        for event in events:
             if event.type == pg.QUIT:
                 running = False
-            elif event.type == USEREVENT_SCOREUP:
-                score_board.raise_score(1)
-            elif event.type == USEREVENT_PHASEUP:
-                if phase_board.phase < 8:
-                    phase_board.raise_phase(1)
-            elif event.type == USEREVENT_SPAWNENEMY:
-                spawn_enemy(phase_board.phase, enemies, all_sprites)
 
-        # 更新処理
-        all_sprites.update()
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_RETURN:
+                    scenes["game"].reset()
+                    current_scene = "game"
 
-        # 当たり判定
-        for enemy in pg.sprite.spritecollide(player, enemies, False):
-            player.health -= 1
+            if event.type == USEREVENT_GAMEOVER:
+                current_scene = "gameover"
 
-        # 描画処理
-        screen.fill(BACKGROUND_COLOR)
-        all_sprites.draw(screen)
-        health_bar.draw(screen)
-        cooltime_bar.draw(screen)
-        score_board.draw(screen)
-        phase_board.draw(screen)
-        pg.display.flip()
+            scenes[current_scene].handle_event(event)
+
+        # ゲームの更新
+        scenes[current_scene].update()
+
+        # ゲームの描画
+        scenes[current_scene].draw(screen)
+
+        # fps の設定
         clock.tick(60)
 
     # 終了処理
