@@ -2,4 +2,5 @@
 
 右にしか曲がることができない避けゲーです．
 
-<div><video controls src="./img/play.mov" muted="false"></video></div>
+https://github.com/user-attachments/assets/a83da7b4-21b3-4e63-bdf2-d28eee8024d9
+
