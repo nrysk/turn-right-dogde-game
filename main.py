@@ -1,3 +1,4 @@
+import math
 import random
 
 import pygame as pg
@@ -144,8 +145,11 @@ class Enemy(pg.sprite.Sprite):
         v = v.normalize() * self.speed
         self.rect.move_ip(v)
 
+        # has_gun なら一定の確率で弾を発射
         if self.has_gun and random.random() < self.shot_probability:
-            Bullet(self.rect.center, self.groups())
+            theta = random.uniform(-math.pi / 4, math.pi / 4)
+            direction = v.rotate(theta)
+            Bullet(self.rect.center, direction, self.groups())
 
 
 class Bullet(pg.sprite.Sprite):
@@ -153,7 +157,7 @@ class Bullet(pg.sprite.Sprite):
     SPEED = 5
     SIZE = 15
 
-    def __init__(self, pos, *groups):
+    def __init__(self, position, direction, *groups):
         super().__init__(*groups)
         self.image = pg.Surface((self.SIZE, self.SIZE)).convert_alpha()
         self.image.fill((255, 255, 255, 0))
@@ -163,12 +167,8 @@ class Bullet(pg.sprite.Sprite):
             [(0, 0), (0, self.SIZE), (self.SIZE, self.SIZE // 2)],
         )
         self.rect = self.image.get_rect()
-        self.rect.center = pos
-        # ランダムな方向に飛ぶ
-        self.velocity = (
-            pg.Vector2(random.random() * 2 - 1, random.random() * 2 - 1).normalize()
-            * self.SPEED
-        )
+        self.rect.center = position
+        self.velocity = pg.Vector2(direction).normalize() * self.SPEED
 
     def update(self):
         self.rect.move_ip(self.velocity)
@@ -192,10 +192,11 @@ def spawn_enemy(phase, *groups):
     if phase >= 4:
         speed = random.randint(2, 6)
     if phase >= 5:
-        count = random.randint(1, 2)
-    if phase >= 6:
         has_gun = True
+    if phase >= 6:
+        count = random.randint(1, 2)
     if phase >= 7:
+        count = 2
         shot_probability = 0.03
 
     for _ in range(count):
